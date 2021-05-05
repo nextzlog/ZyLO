@@ -1,0 +1,58 @@
+name: 'zbuild'
+on:
+  push:
+    branches:
+      - 'master'
+jobs:
+  BuildQxSL:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          repository: nextzlog/qxsl
+      - uses: ilammy/msvc-dev-cmd@v1
+      - uses: ayltai/setup-graalvm@v1
+        with:
+          java-version: 11
+          graalvm-version: 20.1.0
+      - uses: eskatos/gradle-command-action@v1
+        with:
+          arguments: jar
+          gradle-version: 6.7
+      - run: native-image -cp build/libs/zylo.jar
+      - uses: crazy-max/ghaction-upx@v1
+        with:
+          files: qxsl.exe
+          args: --lzma -fq
+      - uses: actions/upload-artifact@v2
+        with:
+          name: qxsl.exe
+          path: qxsl.exe
+  BuildZyLO:
+    needs: BuildQxSL
+    runs-on: ${{matrix.os}}
+    strategy:
+      matrix:
+        include:
+          - os: macos-latest
+            asset_name: zbuild-macos
+          - os: ubuntu-latest
+            asset_name: zbuild-ubuntu
+          - os: windows-latest
+            asset_name: zbuild-windows.exe
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+      - uses: actions/download-artifact@v2
+        with:
+          name: qxsl.exe
+      - run: rustc zbuild.rs -o ${{matrix.asset_name}}
+      - uses: svenstaro/upload-release-action@v2
+        with:
+          tag: zbuild
+          file: ${{matrix.asset_name}}
+          repo_token: ${{secrets.GITHUB_TOKEN}}
+          overwrite: true
