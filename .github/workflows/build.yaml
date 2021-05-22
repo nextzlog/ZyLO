@@ -19,6 +19,7 @@ jobs:
         with:
           arguments: jar
           gradle-version: 6.7
+      - run: java -jar build/libs/zylo.jar > qxsl.fmt
       - run: native-image -cp build/libs/zylo.jar
       - uses: crazy-max/ghaction-upx@v1
         with:
@@ -28,6 +29,10 @@ jobs:
         with:
           name: qxsl.exe
           path: qxsl.exe
+      - uses: actions/upload-artifact@v2
+        with:
+          name: qxsl.fmt
+          path: qxsl.fmt
   BuildZyLO:
     needs: BuildQxSL
     runs-on: ${{matrix.os}}
@@ -49,6 +54,9 @@ jobs:
       - uses: actions/download-artifact@v2
         with:
           name: qxsl.exe
+      - uses: actions/download-artifact@v2
+        with:
+          name: qxsl.fmt
       - run: rustc zbuild.rs -o ${{matrix.asset_name}}
       - uses: svenstaro/upload-release-action@v2
         with:
